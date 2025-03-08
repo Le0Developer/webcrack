@@ -14,19 +14,23 @@ export default {
           const { params } = path.node;
           for (let i = params.length - 1; i >= 0; i--) {
             const p = params[i];
-            if (!t.isIdentifier(p)) return;
+            if (!t.isIdentifier(p)) continue;
 
             const binding = path.scope.getBinding(p.name);
-            if (!binding || binding.constantViolations.length === 0) return;
+            if (!binding || binding.constantViolations.length === 0) continue;
 
             const cv = binding.constantViolations[0];
-            if (!t.isAssignmentExpression(cv.node, { operator: '=' })) return;
+            if (!t.isAssignmentExpression(cv.node, { operator: '=' })) continue;
 
             // check if the variable is used before the assignment
             const isUsedBefore = binding.referencePaths.some((rp) => {
-              if (rp.node.start! <= cv.node.start!) return true;
+              if (rp.node.start! <= cv.node.start!) {
+                return true;
+              }
               for (let p = rp.parentPath; p; p = p.parentPath) {
-                if (p === cv) return true;
+                if (p === cv) {
+                  return true;
+                }
               }
               return false;
             });
