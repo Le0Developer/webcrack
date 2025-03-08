@@ -153,6 +153,7 @@ export function createFunctionMatcher(
 export function isReadonlyObject(
   binding: Binding,
   memberAccess: m.Matcher<t.MemberExpression>,
+  strict = true,
 ): boolean {
   // Workaround because sometimes babel treats the VariableDeclarator/binding itself as a violation
   if (!isConstantBinding(binding)) return false;
@@ -173,24 +174,24 @@ export function isReadonlyObject(
     );
   }
 
-  return binding.referencePaths.every(
-    (path) =>
-      // obj.property
-      memberAccess.match(path.parent) &&
-      // obj.property = 1
-      !path.parentPath?.parentPath?.isAssignmentExpression({
-        left: path.parent,
-      }) &&
-      // obj.property++
-      !path.parentPath?.parentPath?.isUpdateExpression({
-        argument: path.parent,
-      }) &&
-      // delete obj.property
-      !path.parentPath?.parentPath?.isUnaryExpression({
-        argument: path.parent,
-        operator: 'delete',
-      }) &&
-      !isPatternAssignment(path.parentPath!),
+  return binding.referencePaths.every((path) =>
+    // obj.property
+    memberAccess.match(path.parent)
+      ? // obj.property = 1
+        !path.parentPath?.parentPath?.isAssignmentExpression({
+          left: path.parent,
+        }) &&
+        // obj.property++
+        !path.parentPath?.parentPath?.isUpdateExpression({
+          argument: path.parent,
+        }) &&
+        // delete obj.property
+        !path.parentPath?.parentPath?.isUnaryExpression({
+          argument: path.parent,
+          operator: 'delete',
+        }) &&
+        !isPatternAssignment(path.parentPath!)
+      : !strict,
   );
 }
 
