@@ -24,7 +24,7 @@ import { debounce } from './utils/debounce';
 import { downloadFile } from './utils/files';
 import type { DeobfuscateResult } from './webcrack.worker';
 
-export type MangleMode = 'off' | 'all' | 'hex' | 'short';
+export type MangleMode = 'off' | 'all' | 'stable' | 'hex' | 'short';
 
 export const [config, setConfig] = createStore({
   deobfuscate: true,
