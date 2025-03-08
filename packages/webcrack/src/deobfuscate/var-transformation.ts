@@ -30,13 +30,14 @@ export default {
               }
               return false;
             });
-            if (isUsedBefore) return;
+            if (isUsedBefore) continue;
 
             cv.parentPath!.replaceWith(
               t.variableDeclaration('var', [
                 t.variableDeclarator(t.cloneNode(p), cv.node.right),
               ]),
             );
+            path.scope.removeBinding(p.name);
             p.name = generateUid(path.scope, p.name);
             this.changes++;
           }
