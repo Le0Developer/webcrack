@@ -216,6 +216,7 @@ export default function Sidebar(props: Props) {
           <option value="off">Off</option>
           <option value="hex">Hex (_0x)</option>
           <option value="short">Short Names</option>
+          <option value="stable">All names but stable</option>
           <option value="all">All Names</option>
         </select>
       </label>

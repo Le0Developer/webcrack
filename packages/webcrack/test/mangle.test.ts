@@ -88,3 +88,31 @@ test('parameters', () => {
   `).toMatchInlineSnapshot(`(p, p2, p3) => p + p2 + p3;`);
   expectJS('(x = 1) => x;').toMatchInlineSnapshot(`(p = 1) => p;`);
 });
+
+test('stable', () => {
+  const option = () => 'stable' as const;
+
+  expectJS('let x = []', option).toMatchInlineSnapshot('let vA_0_0 = [];');
+  expectJS('let x = [0]', option).toMatchInlineSnapshot('let vA_1_0 = [0];');
+  expectJS('let x = {}', option).toMatchInlineSnapshot('let vO_0_0 = {};');
+  expectJS('let x = {a: 1}', option).toMatchInlineSnapshot(
+    `let vO_1_0 = {
+  a: 1
+};`,
+  );
+
+  expectJS(
+    `
+    let x = 1;
+    let y = 2;
+    let z = 3;
+    console.log(x, x, x, y, z);
+  `,
+    option,
+  ).toMatchInlineSnapshot(`
+    let vLN1_3 = 1;
+    let vLN2_1 = 2;
+    let vLN3_1 = 3;
+    console.log(vLN1_3, vLN1_3, vLN1_3, vLN2_1, vLN3_1);
+  `);
+});

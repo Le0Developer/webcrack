@@ -4,10 +4,10 @@ import type { MangleMode } from './App';
 
 export type WorkerRequest =
   | {
-      type: 'deobfuscate';
-      code: string;
-      options: Options & { mangleMode: MangleMode };
-    }
+    type: 'deobfuscate';
+    code: string;
+    options: Options & { mangleMode: MangleMode };
+  }
   | { type: 'sandbox'; result: unknown };
 
 export type WorkerResponse =
@@ -74,6 +74,8 @@ function convertMangleMode(mode: MangleMode) {
       return false;
     case 'all':
       return true;
+    case 'stable':
+      return (id: string) => 'stable' as const;
     case 'hex':
       return (id: string) => HEX_IDENTIFIER.test(id);
     case 'short':
