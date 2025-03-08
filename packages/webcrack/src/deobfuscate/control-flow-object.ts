@@ -31,16 +31,22 @@ export default {
       // E.g. "6|0|4|3|1|5|2"
       m.stringLiteral(),
       // E.g. function (a, b) { return a + b }
-      createFunctionMatcher(2, (left, right) => [
-        m.returnStatement(
-          m.or(
-            m.binaryExpression(undefined, left, right),
-            m.logicalExpression(undefined, left, right),
-            m.binaryExpression(undefined, right, left),
-            m.logicalExpression(undefined, right, left),
-          ),
-        ),
-      ]),
+      m.matcher<FunctionExpression>((node) => {
+        return (
+          t.isFunctionExpression(node) &&
+          node.params.length >= 2 &&
+          createFunctionMatcher(node.params.length, (left, right) => [
+            m.returnStatement(
+              m.or(
+                m.binaryExpression(undefined, left, right),
+                m.logicalExpression(undefined, left, right),
+                m.binaryExpression(undefined, right, left),
+                m.logicalExpression(undefined, right, left),
+              ),
+            ),
+          ]).match(node)
+        );
+      }),
       // E.g. function (a, b, c) { return a(b, c) } with an arbitrary number of arguments
       m.matcher<FunctionExpression>((node) => {
         return (
@@ -123,7 +129,7 @@ export default {
         if (!binding) return changes;
         if (!isConstantBinding(binding)) return changes;
         if (!transformObjectKeys(binding)) return changes;
-        if (!isReadonlyObject(binding, memberAccess)) return changes;
+        if (!isReadonlyObject(binding, memberAccess, false)) return changes;
 
         const props = new Map(
           objectProperties.current!.map((p) => [
@@ -210,7 +216,7 @@ export default {
       if (objBinding.references !== properties.length + 1) return false;
 
       const aliasBinding = objBinding.scope.getBinding(aliasId.current!.name)!;
-      if (!isReadonlyObject(aliasBinding, memberAccess)) return false;
+      if (!isReadonlyObject(aliasBinding, memberAccess, false)) return false;
 
       objectProperties.current!.push(...properties);
       container.splice(startIndex, properties.length);
