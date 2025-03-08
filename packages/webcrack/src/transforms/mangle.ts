@@ -57,10 +57,11 @@ function getScopeName(
     ).node.value;
   } else if (path.parentPath.isVariableDeclarator({ id: path.node })) {
     const init = path.parentPath.get('init');
-    const suffix = (init.isExpression() && generateExpressionName(init)) || '';
-    return generateUid(path.scope, 'v' + titleCase(suffix));
+    const suffix =
+      (init.isExpression() && generateExpressionName(init, stable)) || '';
+    return 'v' + titleCase(suffix);
   } else if (path.parentPath.isCatchClause()) {
-    return generateUid(path.scope, 'e');
+    return 'e';
   } else if (path.parentPath.isArrayPattern()) {
     return 'v';
   } else {
