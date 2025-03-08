@@ -1,6 +1,6 @@
 import type { NodePath } from '@babel/traverse';
 import traverse from '@babel/traverse';
-import type * as t from '@babel/types';
+import * as t from '@babel/types';
 import * as m from '@codemod/matchers';
 import {
   declarationOrAssignment,
@@ -9,6 +9,7 @@ import {
   renameFast,
   undefinedMatcher,
 } from '../ast-utils';
+import debug from 'debug';
 
 export interface StringArray {
   path: NodePath<t.FunctionDeclaration>;
@@ -23,7 +24,14 @@ export function findStringArray(ast: t.Node): StringArray | undefined {
   const functionName = m.capture(m.anyString());
   const arrayIdentifier = m.capture(m.identifier());
   const arrayExpression = m.capture(
-    m.arrayExpression(m.arrayOf(m.or(m.stringLiteral(), undefinedMatcher))),
+    m.or(
+      // ["hello", "world"]
+      m.arrayExpression(m.arrayOf(m.or(m.stringLiteral(), undefinedMatcher))),
+      // "hello,world".split(",")
+      m.callExpression(constMemberExpression(m.stringLiteral(), 'split'), [
+        m.stringLiteral(),
+      ]),
+    ),
   );
   // getStringArray = function () { return array; };
   const functionAssignment = m.assignmentExpression(
@@ -31,7 +39,7 @@ export function findStringArray(ast: t.Node): StringArray | undefined {
     m.identifier(m.fromCapture(functionName)),
     m.functionExpression(
       undefined,
-      [],
+      m.zeroOrMore(),
       m.blockStatement([m.returnStatement(m.fromCapture(arrayIdentifier))]),
     ),
   );
@@ -42,7 +50,7 @@ export function findStringArray(ast: t.Node): StringArray | undefined {
   // function getStringArray() { ... }
   const matcher = m.functionDeclaration(
     m.identifier(functionName),
-    [],
+    m.zeroOrMore(),
     m.or(
       // var array = ["hello", "world"];
       // return (getStringArray = function () { return array; })();
@@ -61,11 +69,27 @@ export function findStringArray(ast: t.Node): StringArray | undefined {
     ),
   );
 
+  function getArray() {
+    const current = arrayExpression.current!;
+    if (current.type === 'ArrayExpression') {
+      return current;
+    }
+    const split = current.arguments[0] as t.StringLiteral;
+    const content = (current.callee as t.MemberExpression)
+      .object as t.StringLiteral;
+    const elements = content.value
+      .split(split.value)
+      .map((v) => t.stringLiteral(v));
+    return t.arrayExpression(elements);
+  }
+
   traverse(ast, {
     // Wrapped string array from later javascript-obfuscator versions
     FunctionDeclaration(path) {
       if (matcher.match(path.node)) {
-        const length = arrayExpression.current!.elements.length;
+        const length = getArray().elements.length;
+        const logger = debug('webcrack:deobfuscate');
+        logger(`String Array: ${functionName.current}, length ${length}`);
         const name = functionName.current!;
         const binding = path.scope.getBinding(name)!;
         renameFast(binding, '__STRING_ARRAY__');
@@ -85,7 +109,8 @@ export function findStringArray(ast: t.Node): StringArray | undefined {
     VariableDeclaration(path) {
       if (!variableDeclaration.match(path.node)) return;
 
-      const length = arrayExpression.current!.elements.length;
+      const array = getArray();
+      const length = array.elements.length;
       const binding = path.scope.getBinding(arrayIdentifier.current!.name)!;
       const memberAccess = m.memberExpression(
         m.fromCapture(arrayIdentifier),
@@ -94,7 +119,7 @@ export function findStringArray(ast: t.Node): StringArray | undefined {
       if (!binding.referenced || !isReadonlyObject(binding, memberAccess))
         return;
 
-      inlineArrayElements(arrayExpression.current!, binding.referencePaths);
+      inlineArrayElements(array, binding.referencePaths);
       path.remove();
     },
   });
