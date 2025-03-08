@@ -60,6 +60,8 @@ function getScopeName(
     const suffix =
       (init.isExpression() && generateExpressionName(init, stable)) || '';
     return 'v' + titleCase(suffix);
+  } else if (path.parentPath.isCatchClause()) {
+    return 'e';
   } else if (path.parentPath.isArrayPattern()) {
     return 'v';
   } else {
