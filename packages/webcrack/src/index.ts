@@ -173,7 +173,7 @@ export async function webcrack(
       (() => applyTransformAsync(ast, deobfuscate, options.sandbox)),
     plugins.deobfuscate && (() => plugins.deobfuscate(ast)),
 
-    () => applyTransforms(ast, [varTransformation]),
+    //() => applyTransforms(ast, [varTransformation]),
 
     options.unminify &&
       (() => {

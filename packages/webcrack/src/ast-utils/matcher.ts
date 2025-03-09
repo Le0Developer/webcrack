@@ -156,8 +156,7 @@ export function isReadonlyObject(
   strict = true,
 ): boolean {
   // Workaround because sometimes babel treats the VariableDeclarator/binding itself as a violation
-  if (!binding.constant && binding.constantViolations[0] !== binding.path)
-    return false;
+  if (!isConstantBinding(binding)) return false;
 
   function isPatternAssignment(member: NodePath<t.Node>) {
     const { parentPath } = member;
@@ -194,6 +193,21 @@ export function isReadonlyObject(
         !isPatternAssignment(path.parentPath!)
       : !strict,
   );
+}
+
+export function isConstantBinding(binding: Binding) {
+  // Workaround because sometimes babel treats the VariableDeclarator/binding itself as a violation
+  if (binding.constant || binding.constantViolations[0] === binding.path)
+    return true;
+
+  // if there is only a single assignment to the variable with no initial value
+  // consider it a constant
+  if (binding.constantViolations.length === 1) {
+    const [path] = binding.constantViolations;
+    if (path.isAssignmentExpression()) return true;
+  }
+
+  return false;
 }
 
 /**
@@ -253,4 +267,24 @@ export function anySubList<T>(
   ...elements: Array<m.Matcher<T>>
 ): m.Matcher<Array<T>> {
   return new AnySubListMatcher(elements);
+}
+
+export function declarationOrAssignment(
+  name: m.Matcher<t.Identifier>,
+  matcher: m.Matcher<t.Expression>,
+): m.Matcher<t.VariableDeclaration | t.ExpressionStatement> {
+  return m.or(
+    m.variableDeclaration(m.anything(), [m.variableDeclarator(name, matcher)]),
+    m.expressionStatement(m.assignmentExpression('=', name, matcher)),
+  );
+}
+
+export function declarationOrAssignmentExpression(
+  name: m.Matcher<t.Identifier>,
+  matcher: m.Matcher<t.Expression>,
+): m.Matcher<t.VariableDeclaration | t.AssignmentExpression> {
+  return m.or(
+    m.variableDeclaration(m.anything(), [m.variableDeclarator(name, matcher)]),
+    m.assignmentExpression('=', name, matcher),
+  );
 }
