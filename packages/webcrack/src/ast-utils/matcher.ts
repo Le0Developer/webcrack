@@ -195,6 +195,21 @@ export function isReadonlyObject(
   );
 }
 
+export function isConstantBinding(binding: Binding) {
+  // Workaround because sometimes babel treats the VariableDeclarator/binding itself as a violation
+  if (binding.constant || binding.constantViolations[0] === binding.path)
+    return true;
+
+  // if there is only a single assignment to the variable with no initial value
+  // consider it a constant
+  if (binding.constantViolations.length === 1) {
+    const [path] = binding.constantViolations;
+    if (path.isAssignmentExpression()) return true;
+  }
+
+  return false;
+}
+
 /**
  * Returns true if the binding is constant (never re-assigned).
  */
