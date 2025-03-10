@@ -61,7 +61,7 @@ function getScopeName(
       (init.isExpression() && generateExpressionName(init, stable)) || '';
     return 'v' + titleCase(suffix);
   } else if (path.parentPath.isCatchClause()) {
-    return generateUid(path.scope, 'e');
+    return 'e';
   } else if (path.parentPath.isArrayPattern()) {
     return 'v';
   } else {
