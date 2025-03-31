@@ -17,6 +17,16 @@ export default {
     );
     const iterator = m.capture(m.identifier());
 
+    const assignment = m.capture(
+      declarationOrAssignment(
+        sequenceName,
+        m.callExpression(
+          constMemberExpression(m.stringLiteral(sequenceString), 'split'),
+          [m.stringLiteral('|')],
+        ),
+      ),
+    );
+
     const cases = m.capture(
       m.arrayOf(
         m.switchCase(
@@ -28,14 +38,9 @@ export default {
 
     const matcher = m.blockStatement(
       m.anyList<t.Statement>(
+        m.zeroOrMore(),
         // E.g. const sequence = "2|4|3|0|1".split("|")
-        declarationOrAssignment(
-          sequenceName,
-          m.callExpression(
-            constMemberExpression(m.stringLiteral(sequenceString), 'split'),
-            [m.stringLiteral('|')],
-          ),
-        ),
+        assignment,
         // E.g. let iterator = 0 or -0x1a70 + 0x93d + 0x275 * 0x7
         declarationOrAssignment(iterator, m.anything()),
         infiniteLoop(
@@ -61,6 +66,14 @@ export default {
         exit(path) {
           if (!matcher.match(path.node)) return;
 
+          let heading = 0;
+          for (
+            ;
+            path.node.body[heading] !== assignment.current! &&
+            heading < path.node.body.length;
+            heading++
+          );
+
           const caseStatements = new Map(
             cases.current!.map((c) => [
               (c.test as t.StringLiteral).value,
@@ -73,7 +86,7 @@ export default {
           const sequence = sequenceString.current!.split('|');
           const newStatements = sequence.flatMap((s) => caseStatements.get(s)!);
 
-          path.node.body.splice(0, 3, ...newStatements);
+          path.node.body.splice(heading, 3, ...newStatements);
           this.changes += newStatements.length + 3;
         },
       },
